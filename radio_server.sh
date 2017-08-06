@@ -1,4 +1,4 @@
-#!/bin/bash -eux
+#!/bin/bash
 
 # Start HTML server
 echo "Start Server"
@@ -18,6 +18,32 @@ if [ -e netcat_pipe ]; then
 fi
 mkfifo netcat_pipe
 
+function stop_server() {
+	echo "Exiting..."
+	rm netcat_pipe
+
+	echo "Kill HTTP Server..."
+	pkill $server_pid
+	echo "Kill netcat..."
+	killall netcat
+
+	echo "Kill omxplayer"
+	killall omxplayer.bin
+	rm volume_pipe
+
+	echo "Bye"
+	exit 0
+}
+
+# trap ctrl-c and call ctrl_c()
+trap ctrl_c INT
+
+function ctrl_c() {
+        echo "** Trapped CTRL-C"
+	stop_server
+}
+
+
 while true; do
 (cat netcat_pipe | netcat -l 9000 &) | while IFS='' read -r line || [[ -n "$line" ]]; do
 	if [ "${line:0:5}" == "GET /" ]; then
@@ -28,13 +54,8 @@ while true; do
 		echo $cmd
 		url=""
 		if [ "$cmd" == "exit" ]; then
-			echo "Exiting..."
 			cat redirect.response > netcat_pipe
-			killall omxplayer.bin || true
-			pkill -9 $server_pid
-			echo "Bye"
-			killall netcat
-			exit 0
+			stop_server
 		elif [ "$cmd" == "stop" ]; then
 			killall omxplayer.bin || true
 			echo -n "-" >volume_pipe
@@ -75,6 +96,3 @@ while true; do
 done
 done
 
-
-echo "Kill Server"
-pkill $server_pid
