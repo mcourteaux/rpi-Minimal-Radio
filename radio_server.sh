@@ -1,9 +1,11 @@
 #!/bin/bash
 
 # Start HTML server
-echo "Start Server"
+echo "Start HTTP Server"
 sudo python -m SimpleHTTPServer 80 . &
-server_pid=$!
+sudo_pid=$!
+server_pid=$(ps --ppid $sudo_pid -o pid=)
+echo "HTTP Server started with PID $server_pid under $sudo_pid"
 
 # Make fifo
 echo "Make fifo"
@@ -23,7 +25,8 @@ function stop_server() {
 	rm netcat_pipe
 
 	echo "Kill HTTP Server..."
-	pkill $server_pid
+	sudo kill $server_pid
+	sudo kill $sudo_pid
 	echo "Kill netcat..."
 	killall netcat
 
@@ -79,6 +82,8 @@ while true; do
 			url="http://nostalgiewhatafeeling.ice.infomaniak.ch/nostalgiewhatafeeling-128.mp3"
 		elif [ "$cmd" == "qmusic" ]; then
 			url="http://icecast-qmusic.cdp.triple-it.nl:80/Qmusic_be_live_96.mp3"
+		elif [ "$cmd" == "rai1" ]; then
+			url="http://icestreaming.rai.it/1.mp3"
 		else
 			echo "Unknown radio."
 			continue
